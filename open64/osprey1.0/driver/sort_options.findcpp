@@ -1,0 +1,45 @@
+#!/bin/sh
+
+gcc="$1"
+
+link=`/bin/ls -al "$gcc" | awk 'BEGIN{FS=">"}{split($2,A," ") ; print A[1]}'`
+
+# be sure to follow any symbolic links to reach the location
+# where this script truly resides. 
+while  test "$link" && \
+       dirname "$gcc"  > /dev/null 2>&1 && \
+       basename "$gcc" > /dev/null 2>&1
+  do
+  dir=`dirname "$gcc"`;
+  newpath="$link";
+  newdir=`dirname ${newpath}`;
+  newname=`basename ${newpath}`;
+  dir=`cd ${dir} >/dev/null 2>&1; cd ${newdir} >/dev/null 2>&1; pwd`;
+  gcc="${dir}/${newname}";
+
+  oldlink="$link"
+  link=`/bin/ls -al "$gcc" | awk 'BEGIN{FS=">"}{split($2,A," ") ; print A[1]}'`
+  # readlink on the SGI Origin returns name of non-symlink, instead of blank, so
+  # make sure a 'link' resolves to something other than itself
+  if test x"$link" = x"$oldlink"; then
+    link=
+  fi
+done
+
+# be sure we always use a full path
+dir=`dirname "$gcc"`;
+cpp=`cd ${dir} >/dev/null 2>&1; pwd`/cpp
+if test -f $cpp ; then
+  echo $cpp
+  exit 0
+else
+  for path in /lib /usr/lib /usr/bin ; do
+    if test -f $path/cpp ; then
+       echo $path/cpp
+       exit 0
+    fi
+  done
+  echo cpp
+  exit 1
+fi
+

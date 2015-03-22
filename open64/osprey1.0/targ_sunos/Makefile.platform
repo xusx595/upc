@@ -1,0 +1,41 @@
+SHELL = /bin/sh
+
+#-----------------------------------------------------------------------
+# For detailed description of the following BUILD parameters, see
+# osprey1.0/Makefile.gsetup
+#
+# Usually, to port the F90 front end to different platform, onl
+# need to change "BUILD_TARGET", "BUILD_OS" and "BUILD_COMPILER"
+#----------------------------------------------------------------------- 
+
+BUILD_ABI      = I32BIT
+BUILD_ARCH     = IA32
+BUILD_TARGET   = IA64
+BUILD_OS       = SUNOS
+BUILD_COMPILER = GNU
+#BUILD_COMPILER = VENDOR
+BUILD_TYPE     = SHARED
+BUILD_OPTIMIZE = DEBUG
+BUILD_INSTALL  = DEFAULT
+BUILD_VARIANT  = DEFAULT
+BUILD_SB       = NO
+
+HOSTDEFS += -DSIZEOF_LONG=4 -DSIZEOF_INT=4 -DSIZEOF_SHORT=2
+
+ifeq ($(shell uname -p),sparc)
+HOSTDEFS += -D__BIG_ENDIAN__
+endif
+
+CFLAGS += -D_GCC_NO_PRAGMAWEAK
+CXXFLAGS += -D_GCC_NO_PRAGMAWEAK
+
+#-----------------------------------------------------------------------
+#  If C++ Standard Template Library Extension (slist, hashtable, etc)
+#  is not in the default search dirs of the chosen compiler, define it.
+#
+#-----------------------------------------------------------------------
+
+# Use $(MAKE), automatically defined by GNU make
+#MAKE = gmake
+
+PLATFORM_DIRTS_SPECIFIC = 

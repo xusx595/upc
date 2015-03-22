@@ -1,0 +1,195 @@
+#!/bin/sh
+
+MYDIR=`dirname $0`
+GUESS="$MYDIR/config.guess"
+if test ! -x "$GUESS" ; then
+  echo "ERROR: Unable to find $GUESS" 1>&2
+  exit 1
+fi
+HOST=`$GUESS`
+
+experimental () {
+  echo "****************************************************************************** " 1>&2
+  echo "****************************************************************************** " 1>&2
+  echo "  WARNING: the $HOST port is experimental " 1>&2
+  echo "****************************************************************************** " 1>&2
+  echo "****************************************************************************** " 1>&2
+}
+
+deprecated () {
+  echo "****************************************************************************** " 1>&2
+  echo "****************************************************************************** " 1>&2
+  echo "  WARNING: the $HOST port is deprecated " 1>&2
+  echo "  WARNING: no support will be provided for platform-specific problems " 1>&2
+  echo "****************************************************************************** " 1>&2
+  echo "****************************************************************************** " 1>&2
+}
+
+getabi () {
+ if test -z "$ABI" ; then
+  rm -f $MYDIR/abi
+  ABI=`$CXX -o $MYDIR/abi $MYDIR/abi.cc 1>&2 && $MYDIR/abi`
+  case "$ABI" in
+    ILP32) echo "ABI is: $ABI"  1>&2 ;;
+    LP64) echo "ABI is: $ABI"  1>&2 ;;
+    *)
+      echo "ERROR: Failed to find a known ABI ($ABI)." 1>&2
+      echo "       Perhaps your C++ compiler is broken or creates unusable executables?" 1>&2
+      exit 1
+    ;;
+  esac
+ fi
+}
+
+checkbadabi () {
+  getabi;
+  if test "$ABI" != "$ABIWANT" ; then
+    case "$ABI" in
+      $ABIWANT) ;;
+      *)  
+        echo "ERROR: The $ABI ABI is not supported for building the UPC translator" 1>&2
+        echo "         on $HOST." 1>&2
+        echo "       Please select a C/C++ compiler that generates $ABIWANT executables." 1>&2
+        echo "       Perhaps try: $ALTABIHINT" 1>&2
+        exit 1
+      ;;
+    esac
+  fi
+}
+
+requireILP32 () {
+  if test -z "$ALTABIHINT" ; then
+    ALTABIHINT='gmake CC="gcc -m32" CXX="g++ -m32"'
+  fi
+  ABIWANT="ILP32"
+  checkbadabi;
+}
+
+requireLP64 () {
+  if test -z "$ALTABIHINT" ; then
+    ALTABIHINT='gmake CC="gcc -m64" CXX="g++ -m64"'
+  fi
+  ABIWANT="LP64"
+  checkbadabi;
+}
+
+echo "Host is: $HOST" 1>&2
+case "$HOST" in
+  ia64-*-linux-* | x86_64-*-linux-*)  # Itanium/Opteron Linux host
+	getabi;
+	#requireLP64;
+        case "$ABI" in
+	  ILP32) echo "targia32_ia64_nodebug" ;; # 32-bit Opteron
+	  LP64)  echo "build_ia64" ;;
+      	esac
+  ;;
+
+  i686-*-linux-*) # 32 bit Linux host
+  	echo "targia32_ia64_nodebug"
+  ;;
+
+#  i686-pc-cygwin) # Cygwin
+#        experimental;
+#	requireILP32;
+#  	echo "targ_ilp32_cygwin"
+#  ;;
+
+  alpha*-*-osf*) # 64 bit Tru64/Alpha host
+        deprecated;
+  	echo "targ_alpha_tru64"
+  ;;
+  
+  i386-apple-darwin* | x86_64-apple-darwin* | powerpc-apple-darwin*) # OSX 10.4+ host
+	getabi;
+        case "$ABI" in
+	  ILP32) echo "targ_ilp32_osx" ;;
+	  LP64)  echo "targ_lp64_osx" ;;
+      	esac
+  ;;
+
+  powerpc-ibm-aix5* | rs6000-ibm-aix) # PPC AIX 5.x host or AIX of unknown version
+        ALTABIHINT='OBJECT_MODE=32 ; gmake CC="gcc -maix32" CXX="g++ -maix32"'
+	requireILP32;
+        deprecated;
+  	echo "targ_ppc_aix"
+  ;;
+
+  powerpc*-*-linux-*) # PPC Linux host
+	getabi;
+        case "$ABI" in
+	  ILP32) echo "targia32_ia64_nodebug" ;;
+	  LP64)  echo "build_ia64" ;;
+      	esac
+  ;;
+
+  arm*-unknown-linux-*) # ARM Linux
+        experimental;
+	echo "targia32_ia64_nodebug"
+  ;;
+
+  i386-pc-solaris*) # x86 solaris
+        experimental;
+	requireILP32;
+	echo "targ_sunos"
+  ;;
+
+  x86_64-pc-solaris*) # x86_64 solaris
+        experimental;
+	requireLP64;
+	echo "targ_lp64_sunos"
+  ;;
+
+  sparc-sun-solaris*) # sparc solaris
+	getabi;
+        experimental;
+        case "$ABI" in
+	  ILP32) echo "targ_sunos" ;;
+	  LP64)  echo "targ_lp64_sunos" ;;
+      	esac
+  ;;
+
+  # amd64 FreeBSD, OpenBSD and NetBSD
+  x86_64-*-freebsd* | amd64-*-openbsd* | x86_64-*-netbsd*)
+        experimental;
+	requireLP64;
+	echo "targ_lp64_freebsd"
+  ;;
+
+  # i386 FreeBSD, OpenBSD and NetBSD
+  i386-*-freebsd* | i386-*-openbsd* | i386-*-netbsd*)
+        experimental;
+	requireILP32;
+	echo "targ_ilp32_freebsd"
+  ;;
+
+  # MIPS64 little-endian Linux as on SiCortex
+  mips64el-*-linux-gnu)
+        experimental;
+	requireLP64;
+	echo "build_ia64"
+  ;;
+
+  # MIPS64 big-endian Linux as on Debian for Malta
+# NOT YET WORKING
+#  mips64-*-linux-*)
+#        experimental;
+#	getabi;
+#        case "$ABI" in
+#	  ILP32) echo "targia32_ia64_nodebug" ;;
+#	  LP64)  echo "build_ia64" ;;
+#      	esac
+#  ;;
+
+  *) 
+	echo "ERROR: Your platform: $HOST" 1>&2
+	echo "       does not appear to be supported for hosting the UPC translator." 1>&2
+	echo "       However, your platform is likely to still be supported by Berkeley UPC." 1>&2
+	echo "       You should build the UPC runtime distribution and use the transparent" 1>&2 
+	echo "       remote compilation feature to remote compile on a supported host." 1>&2
+	echo "       See http://upc.lbl.gov for further instructions." 1>&2
+	exit 1
+  ;;
+esac
+
+exit 0
+

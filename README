@@ -1,0 +1,381 @@
+This is the UPC-to-C translator component of the Berkeley UPC system.  
+
+Note that you do not need to build this code to use Berkeley UPC. Our runtime
+system by default uses a public translator (built from this source code) that we
+provide on our website, via HTTP.
+
+The translator code is derived from the Open64 compiler, open-sourced by Silicon
+Graphics, and now largely maintained by the open source community and AMD.
+
+-------------
+Prerequisites
+-------------
+
+Unfortunately, due to C++ portability issues the translator currently builds on
+a limited number of systems and compilers.  The configurations that have been
+most extensively tested are:
+
+	- Linux x86
+	- Linux x86-64 			(32- or 64-bit)
+	- Linux IA64			(64-bit only)
+	- Linux PowerPC 		(32- or 64-bit)
+	- Apple OSX PowerPC		(32- or 64-bit)
+	- Apple OSX Intel x86		(32- or 64-bit) [gcc only, not clang]
+
+   (Note bit width refers to the ABI of the translator binaries only - 
+    all translators can generate code for any supported runtime platform)
+
+The translator has been built and passed our testing on the following platforms
+but we do not test these platforms as actively as those above:
+
+	- Solaris 10 Intel (i86pc)      (32- or 64-bit)
+	- Solaris 10 SPARC              (32- or 64-bit)
+	- FreeBSD i386                  (32-bit only)
+	- FreeBSD amd64                 (64-bit only)
+	- OpenBSD i386                  (32-bit only)
+	- OpenBSD amd64                 (64-bit only)
+	- NetBSD i386                   (32-bit only)
+	- NetBSD amd64                  (64-bit only)
+	- Linux ARM			(32-bit only)
+
+We no longer support the following platforms.  While we could still build the
+translator on these platforms when we last tested, we no longer test these
+platforms.  No support will be provided for platform-specific bugs:
+
+	- Linux mips64el (SiCortex)	(64-bit only)
+	- Compaq/HP Tru64/Alpha 
+	- IBM AIX PowerPC 		(32-bit only)
+
+On all of these platforms, g++ version 3.4 or above was used.  Success has been
+reported using older versions of g++, but this has not been regularly tested.  
+We primarily test with g++ 4.x versions at this time, but see the Release Notes
+section, below.
+
+Our testing also indicates that the following compilers build correct translator
+executables with no known platform-specific bugs:
+	- gcc built/distributed by Apple Inc.
+	- gccfss distributed by Oracle (formerly Sun)
+	- llvm-gcc-4.2.1 compiler (llvm-2.8)
+	- Intel compiler (tested: v9.1/ia64, v10.0/ia64, v11.1/x86-64)
+	- PathScale compiler version 3.2 for x86-64
+	- PathScale compiler version v3.3a_sicortex for MIPS64
+Testing of the Open64 compiler distributed by AMD also appears to produce
+correct results 99% of the time, but has at least one known bug.
+
+You must have GNU 'make' on your system and use it to build the translator.
+The build scripts will require that 'perl' and 'csh' be in your $PATH.
+
+Neither yacc nor bison is required to build from these sources.  However,
+if modifying the parser grammar (c-parse.y), you will need Berkeley yacc
+(aka byacc) or GNU Bison.  Solaris yacc is known NOT to work, and other yacc
+implementations are suspected not to.  If your system's default "yacc" is
+neither of these supported variants, you will need to set the YACC variable
+on the make command line, for instance to YACC=byacc or YACC='bison -y'.
+We test mostly with byacc-1.9, and less with Bison-1.x and Bison-2.x.
+
+----------------------------------------
+Building and "installing" the translator
+----------------------------------------
+
+To facilitate eventually merging our UPC-specific changes into the general
+Open64 code base, we have changed as little as possible about the Open64 build
+system.  
+
+1) You must use GNU 'make' to build the translator (on some systems it will be
+   called 'gmake', on others, just 'make':  try 'make --version' to determine).
+
+2) Run GNU make to build the translator:
+
+    make    // or 'gmake', if that is what GNU make is called on your system
+
+   You must either ensure that the versions of gcc/g++/bison that you wish to
+   use are in your $PATH, or you may set the CC, CXX or YACC variables on the
+   gmake command line as needed.
+
+   The build tree will occupy approximately 600 Megabytes of disk space, and
+   can safely be moved after the build without any side effects.
+
+   The top of Makefile contains a few tweakable settings, but in most cases you
+   probably want to keep the defaults.
+
+3) (Optional) Install the translator
+   
+   To install the translator to a selected location after the build step above
+   completes, run GNU make as follows:
+
+     make install PREFIX=/path/to/install
+
+   The install tree will occupy approximately 200 Megabytes of disk space, 
+   and can safely be moved after build without any side effects.
+
+In order to invoke the translator, you need to provide the upcc compiler driver 
+in runtime distribution with the appropriate pathname for where you have placed
+the translator. If you plan to run the translator directly from the build tree
+created in step 2, the correct path to use is:
+
+  (path to your BUILD tree)/open64/osprey1.0/$(BUILDDIR)
+
+If you want to use the translator installed in step 3, the correct path is: 
+
+  (path provided as PREFIX)/targ
+  
+You should provide the appropriate path to the runtime in the 'translator'
+setting of the 'upcc.conf' file in the runtime's build/install tree. Examples
+are provided in upcc.conf.  Users can also select alternate translators in a
+~/.upccrc file or with 'upcc -translator=path'.
+
+See the runtime's INSTALL documentation for information on how to point the
+'upcc' Berkeley UPC front-end at a translator that resides on a remote machine,
+using HTTP or ssh.  Any translator can support any UPC runtime on any
+architecture, and so this is our current method for supporting UPC on systems
+where the translator will not build.
+
+-------------
+Release Notes
+-------------
+
+== Version 2.20.0 ==
+
++ Portability of the translator
+  - Can now build with gcc-4.9
+  - Can now build on recent OpenBSD releases which lack a stab.h header
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug 3235 - translator allows PTS compare w/ differing blocksizes
+  - gen_util.cxx may try to define inline via __inline circularly
+
++ Misc.
+  - Remove (unused) caterr linux/x86 binary from distribution
+
+== Version 2.18.2 ==
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug3192 - syntax error on "array[restrict]" in parameter list
+  - bug3194 - bad code gen on upc_forall with 64-bit affinity expression
+  - bug3201 - bad translation for volatile pointer to shared array
+  - bug3202 - function defn incompatible with its prototype
+
++ Misc.
+  - Starting with this release, the set of UPC-level optimizations enabled
+    by ``upcc -opt'' no longer includes the split-phase optimization.
+    See bug 2662 for details.
+  - The complete sources for the Berkeley UPC-to-C translator, and all of
+    our development work, are now hosted in Git at BitBucket.  See
+      http://bitbucket.org/berkeleylab/upc-translator
+
+== Version 2.18.0 ==
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug349 - (PARTIAL fix) inconsistent conversion of PTS to integral types
+  - bug3172 - function definition after declaration loses block size
+
+== Version 2.16.2 ==
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug3141: translator buffer overrun
+  - bug3143: conformance to issue #64 in UPC 1.3 draft specification
+  - bug3145: conformance to issue #104 in UPC 1.3 draft specification
+  - bug3146: conformance to issue #71 in UPC 1.3 draft specification
+  - bug3147: conformance to issue #70 in UPC 1.3 draft specification
+
+== Version 2.16.0 ==
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug858: translator fails to lower C99 array designators
+  - bug2698: bad code gen for "short" string initializers 
+  - bug3048: code generated with incorrect blocking factor
+  - bug3052: failure to diagnose automatic layout qualifier with pointers
+  - bug3101: translator crash on extern decl after defn w/ initializer
+  - bug3105: -opt generates multiply defined initializers
+  - bug3111: ..../targ//be/be.so: undefined symbol: dlopen
+  - bug3124/3126: crashes on declarations using incomplete types
+  - Misc. additional fixes for improved UPC and C99 conformance
+
+== Version 2.14.2 ==
+
++ Portability of the translator
+  - Can now build with llvm-gcc-4.2.1 from the llvm-2.8 release (bug 3077)
+  - Can now process c-parse.y with bison-2.x (bug 3091)
+  - Can now build with gcc-4.7.0 (bug 3097)
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug3098: error on static string initializers containing newlines
+
+== Version 2.14.0 ==
+
++ GCC
+  - Now tolerant of recent changes in gcc's pre-processor output
+  - Now tolerant of attribute additions to gcc (e.g. in OpenBSD headers)
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug1319: refixed to reject expansion of asm()-based macros in UPC code
+  - bug3017: erroneous type error involving shared[1] int and shared int
+  - bug3039: silent truncation of large enum values (now issues a warning)
+  - bug3037: Wrong spill for conditional operator with string literal 
+
+== Version 2.12.2 ==
+
++ GNU Make
+  - Problems building with GNU Make version 3.82 have been resolved
+
++ New Ports
+  - Initial EXPERIMENTAL translator ports to additional platforms:
+    - IBM AIX 6.x PowerPC 32-bit translator executable
+    - Linux mips64el (SiCortex) 64-bit translator executable
+  - Additional compilers tested for building of the translator:
+    - Intel compilers on x86-64 and ia64
+    - PathScale 3.x compilers for x86-64 and mips64el
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug1382: limited size of static char arrays
+  - bug1664/2364/2963: PTS in shared struct always treated as indefinite
+  - bug1797/2358: backend SEGV on AIX
+  - bug1926: translator generates conflicting struct definition for typedefs
+  - bug2308/2967: missing struct definition in translated output
+  - bug2500: incorrect type for pointer to FIRST field of shared struct
+  - bug2693: TLD not applied accessing array field of a struct at file-scope
+  - bug2702: SEGV writing WHIRL for array of structures with a string
+  - bug2723: regression in 2.10.0 translator accessing union
+  - bug2867: problem(s) with function pointers in nested shared struct
+  - bug2890: translator error on accessing a struct member of an union
+  - bug2900: initializer failure w/ symmetric pointers
+  - bug2947: (partial fix) struct initializers violate alignment restrictions
+  - bug2949: UPC translation failing on arrA[1UL * (THREADS )]
+  - bug2956: side-effects of upc_for_all() affinity expression are lost
+  - bug2958: temporaries used for initialization can shadow shared vars
+  - bug2959: incorrect blocksize warnings with default blocksize
+  - bug2960: incorrect upc_localsizeof()
+  - bug2961: translator crash on upc_localsizeof() with dynamic threads
+  - bug2962: translator crash on addr of shared PTS as nested struct field
+  - bug2968: wrong type from upc_blocksizeof(indefinite)
+  - bug2971: arbitrary limit on depth of struct/union field access
+  - bug2972: function address translated as TLD initializing file scope var
+  - bug2973: crash on initialized shared pointer-to-private
+  - bug2979: warning on NULL initializer for PTS in struct with struct-PTS
+  - bug2981: bad behavior(s) converting integer constant to PTS
+  - bug2982: redundant errors on private to shared pointer conversion
+  - bug2989: translator build failure if CFLAGS set in environment
+  - bug3009: loss of local-scoped variables with C99 for loops
+
+== Version 2.12.1 ==
+
++ The following user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug1965/2831: problems with #include when not at file scope
+  - bug2306: sizeof(A[0]) miscomputed as sizeof(A)
+  - bug2936: translator truncates sizeof(struct) to 32 bits
+
+== Version 2.12.0 ==
+
++ G++ 4.X
+  To the best of our knowledge the G++ 4.4.x problems (see 2.10.2 notes,
+  below) have been fixed.  In our testing G++ 4.5.x has shown no problems.
+
++ New Ports
+  - Initial EXPERIMENTAL translator ports to additional platforms:
+    - NetBSD/i386 32-bit translator executable
+    - NetBSD/amd64 64-bit translator executable
+  - Additional compilers tested for building of the translator:
+    - Apple's gcc well tested
+    - Sun's gccfss lightly tested
+    - AMD's openCC lightly tested (one known bug)
+
++ Several user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug2061: pointer arith on shared PTS incorrectly yields a shared value
+  - bug2690: translator crash on EXAMPLE2 from p31 of UPC spec 1.2
+  - bug2778/2893: bad code gen for UPC automatic block size
+  - bug2851: translator corrupting internal type info
+  - bug2862: incorrect debug line numbers in body of upc_forall()
+  - bug2877: translator may truncate PTS arithmetic operands
+  - bug2878: some internal prototypes susceptible to identifier capture
+  - bug2882: violation of strict semantics when -opt passed to upcc
+
+== Version 2.10.2 ==
+
++ G++ 4.X
+  The link failures described in the 2.8.0 notes (below) have been resolved
+  (to the best of our knowledge), and we have tested with g++ as recent as
+  4.3.x.  However, we have seen problems with g++-4.4.x.
+
++ New Ports
+  - Added support for additional platforms:
+    - MacOS/x86 64-bit translator executable (previously only 32-bit)
+    - MacOS/PPC 64-bit translator executable (previously only 32-bit)
+    - Linux/PPC 32-bit translator executable (previously only 64-bit)
+  - Initial EXPERIMENTAL translator ports to additional platforms:
+    - Solaris/i86pc 32- and 64-bit translator executables
+    - Solaris/SPARC 32- and 64-bit translator executables
+    - FreeBSD/i386 32-bit translator executable
+    - FreeBSD/amd64 64-bit translator executable
+    - OpenBSD/i386 32-bit translator executable
+    - OpenBSD/amd64 64-bit translator executable
+
++ General portability improvements
+  - Fixed support for building with some vendors' g++-4.1.x (bug 2202)
+  - Fixed DependencyGenerator for use with perl 5.10 and newer (bug 2661)
+
++ Several user-visible bugs are fixed in this release
+  (see http://upc-bugs.lbl.gov for details):
+  - bug600: #line directives broken for #include of file in same directory
+  - bug819: incorrect overflow warning on upc_io_test/64
+  - bug846: overflows computing sizeof() or upc_localsizeof() large arrays
+  - bug896: warning on correct assignment involving pointer to an array
+  - bug1020: comparison of ptr to local w/ ptr to shared should be an error
+  - bug1113/1647: crashes with certain nested for() or upc_forall() loops
+  - bug1442/2679: over-zealous DSE w/ -opt on MacOS-build translators
+  - bug1464: ppc64 translator crash on some code for 32-bit targets
+  - bug1668: translator crash on arithmetic on (shared void *)
+  - bug1748/2403: translator crash when outputting NaN or INFINITY
+  - bug1965: problems with #include when not at file scope
+  - bug2703: garbage collection error that could cause translator crashes
+
+== Version 2.10.0 ==
+
++ EXPERIMENTAL compiler optimizations
+  This release contains numerous bug fixes related to the UPC-level optimization
+  introduced in the 2.8.0 release.
+
++ G++ 4.X
+  See the 2.8.0 notes (below) for information on link failures that are still
+  present in this release when using some g++ 4.x versions.
+
++ AIX deprecation
+  We will no longer support building the UPC translator on AIX.
+
+== Version 2.8.0 ==
+
++ EXPERIMENTAL compiler optimizations
+  This release adds experimental support for UPC-level optimizations of user's
+  code via the '-opt' flag to upcc.  See the upcc man page for documentation.
+
++ G++ 4.X
+  With g++ version 4.x, the code we maintain builds correctly for the various
+  versions of g++ compiled from source obtained from gcc.gnu.org.  However, there
+  are "vendor" versions (e.g. Debian, Red Hat, etc.) that behave differently and
+  produce link failures with messages containing text such as
+      relocation R_X86_64_PC32 against 'Phi_To_Idx_Map' can not be used ....
+  or
+      final link failed: Nonrepresentable section on output
+  Unfortunately, the affected compiler versions lack compile-time identification
+  that would allow us to adjust automatically.
+  This has been assigned Bug #2202 in our bug database (http://upc-bugs.lbl.gov).
+  That bug report contains at least 2 possible work arounds and should always
+  contain the most recent information on this issue.
+
++ AIX
+  We have seen that the translator build on AIX frequently crashes when passed
+  '-opt' to enable UPC-level optimizations.  This issue has been assigned bug
+  #2385 in our bug database.  Please consult the bug report for the most 
+  recent information on this issue.
+  The recommendation at the time this README is being written is not to use a
+  translator build on AIX if you wish to utilize '-opt'.
+

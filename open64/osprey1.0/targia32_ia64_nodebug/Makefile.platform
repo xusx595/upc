@@ -1,0 +1,26 @@
+SHELL = /bin/sh
+
+#-----------------------------------------------------------------------
+# For detailed description of the following BUILD parameters, see
+# osprey1.0/Makefile.gsetup
+#
+# Usually, to port the F90 front end to different platform, onl
+# need to change "BUILD_TARGET", "BUILD_OS" and "BUILD_COMPILER"
+#----------------------------------------------------------------------- 
+
+BUILD_ROOTS    = TARGET
+BUILD_ABI      = I32BIT
+BUILD_ARCH     = IA32
+BUILD_TYPE     = SHARED
+BUILD_OPTIMIZE = DEBUG
+BUILD_VARIANT  = DEFAULT
+BUILD_INSTALL  = DEFAULT
+BUILD_TARGET   = IA64
+BUILD_COMPILER = GNU
+BUILD_OS       = LINUX
+HOSTDEFS += -DSIZEOF_LONG=4 -DSIZEOF_INT=4 -DSIZEOF_SHORT=2
+
+ifeq ($(shell uname -m),mips64)
+HOSTDEFS += -D__BIG_ENDIAN__
+endif
+

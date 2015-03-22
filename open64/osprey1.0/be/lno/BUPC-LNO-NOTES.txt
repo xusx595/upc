@@ -1,0 +1,53 @@
+Start this entry as a placeholder for my notes on LNO features. 
+I'll try at least to keep a consistent list of features and command 
+line options so we can easily update any release notes. 
+
+All the flags shown in this file require at least "upcc --opt" .
+
+
+
+Loop Reversal
+===============
+-LNO:blind_loop_reversal 
+
+Loop Unrolling
+==================
+
+Multiple ways to get loops unrolled. It happens either automatically
+based on machine models or under user control. 
+Since the models are tuned for 
+serial code on Itanium-1 (??) it's not necessarily the best way to go.
+For fine grained loops that contain communication, a higher degree
+of unroll might be desired. 
+
+This degree can be controlled in two ways. 
+
+i. Command line option:  
+      upcc --opt -Wu,"-LNO:full_unroll=64" 
+   Have to check but I think this is a big hammer that will unroll 
+every single loop 64 times.
+
+ii. Within the source, at loop granularity
+
+    #pragma unroll 4
+    for(i=0; i < N; i++) 
+      .....
+
+
+Message Vectorization
+===================== 
+
+Flags are:  -Wu,"-Wb,-do-msg-vect"
+
+
+LNO Debugging
+==============
+
+The flags I'm using right now are:
+
+-Wu,"-Wb,-trlno"  -Wu,"-Wb,-O3"   -Wu,"-Wb,-tt31:0x614ff07" -Wu,"-Wb,-tt32:0x100703" -Wu,"-Wb,-tt25:0x000c"  
+
+
+
+
+

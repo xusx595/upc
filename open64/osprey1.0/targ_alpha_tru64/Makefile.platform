@@ -1,0 +1,40 @@
+SHELL = /bin/sh
+
+#-----------------------------------------------------------------------
+# For detailed description of the following BUILD parameters, see
+# osprey1.0/Makefile.gsetup
+#
+# Usually, to port the F90 front end to different platform, onl
+# need to change "BUILD_TARGET", "BUILD_OS" and "BUILD_COMPILER"
+#----------------------------------------------------------------------- 
+
+BUILD_ABI      = A64BIT
+BUILD_ARCH     = ALPHA
+BUILD_TARGET   = IA64
+BUILD_OS       = TRU64
+BUILD_COMPILER = GNU
+#BUILD_COMPILER = VENDOR
+BUILD_TYPE     = SHARED
+# wei: When compiling with -g on alpha, gcc3.3 barfs on strtab.cxx as the assembler can't handle
+# long mangled names from c++ templates.
+# since I don't know which flag will fix this, I'm turning off debugging for now
+#BUILD_OPTIMIZE = DEBUG
+BUILD_OPTIMIZE = NODEBUG
+BUILD_INSTALL  = DEFAULT
+BUILD_VARIANT  = DEFAULT
+BUILD_SB       = NO
+
+
+CFLAGS += -D_GCC_NO_PRAGMAWEAK
+CXXFLAGS += -D_GCC_NO_PRAGMAWEAK
+
+#-----------------------------------------------------------------------
+#  If C++ Standard Template Library Extension (slist, hashtable, etc)
+#  is not in the default search dirs of the chosen compiler, define it.
+#
+#-----------------------------------------------------------------------
+
+# Use $(MAKE), automatically defined by GNU make
+#MAKE = gmake
+
+PLATFORM_DIRTS_SPECIFIC = 
